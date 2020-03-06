@@ -74,9 +74,25 @@
 		}
 
 		public function sendNotification ($sweepTime, $level) {
-			if (file_exists('sent-notifications.js')) {
-				// @todo
-				// check if sent in last 12 hours
+			$sentDataFile = 'sent-notifications.js';
+
+			$sent = @file_get_contents($sentDataFile);
+			$sentData = array();
+
+			if ($sent !== false) {
+				$sentData = json_decode($sent, true);
+
+				if (!is_null($sentData)) {
+					// check if sent in last 12 hours
+					if (is_numeric($sentData[$level])) {
+						$diff = time() - $sentData[$level];
+
+						if ($diff < 12 * 60 * 60) {
+							echo "Already sent {$level} notification.\n";
+							return;
+						}
+					}
+				}
 			}
 
 			$date = gmdate('g:ia \o\n l, F jS', $sweepTime);
@@ -99,6 +115,10 @@
 
 			echo "Attempting to send {$level} notification.\n";
 			shell_exec($cmd);
+
+			// save send time
+			$sentData[$level] = time();
+			file_put_contents($sentDataFile, json_encode($sentData));
 		}
 
 		public function getData ($url) {
