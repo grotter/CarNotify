@@ -3,6 +3,7 @@
 	class Notify {
 		protected $_credentials = false;
 		protected $_loc = false;
+		protected $_files = array();
 
 		public function __construct () {
 			if (php_sapi_name() != 'cli') die('not allowed');
@@ -10,19 +11,25 @@
 			require_once('credentials.php');
 			$this->_credentials = $credentials;
 
+			$this->_files = array(
+				'png' => dirname(__FILE__) . '/current-location.png',
+				'data' => dirname(__FILE__) . '/sent-notifications.js'
+			);
+
 			// get location
 			$url = 'https://www.ocf.berkeley.edu/~grotter/prius/json/';
 			$url .= '?' . http_build_query($this->_credentials);
 
 			$this->_loc = $this->getData($url);
-			
 			if (isset($this->_loc->error)) return;
 
 			// quit if parked less than three hours
+			/*
 			$diff = $this->getSecondsFrom($this->_loc->timestamp);
 			
 			if ($diff === false) return;
 			if ($diff < 3 * 60 * 60) return;
+			*/
 
 			// street sweeping
 			$this->getStreetSweeping();
@@ -46,7 +53,7 @@
 			$untilSweep = $this->getSecondsFrom($row->properties->cleaning_time_start);
 			if (!is_numeric($untilSweep)) return;
 			
-			$hours = abs($untilSweep / 3600);
+			$hours = ($untilSweep / 3600) * -1;
 
 			if ($hours < 12) {
 				if ($hours < 1.1) {
@@ -74,22 +81,26 @@
 		}
 
 		public function sendNotification ($sweepTime, $level) {
-			$sentDataFile = 'sent-notifications.js';
-
-			$sent = @file_get_contents($sentDataFile);
+			$sent = @file_get_contents($this->_files['data']);
 			$sentData = array();
 
+			$currentLocation = $this->_loc->latitude . ',' . $this->_loc->longitude;
+
 			if ($sent !== false) {
+				// previous data present
 				$sentData = json_decode($sent, true);
 
-				if (!is_null($sentData)) {
-					// check if sent in last 12 hours
-					if (is_numeric($sentData[$level])) {
-						$diff = time() - $sentData[$level];
-
-						if ($diff < 12 * 60 * 60) {
-							echo "Already sent {$level} notification.\n";
-							return;
+				if (is_null($sentData)) {
+					// decode failed, reset to empty array
+					$sentData = array();
+				} else {
+					if (is_string($sentData['latlong'])) {
+						// only check if same location
+						if ($sentData['latlong'] == $currentLocation) {
+							if (is_numeric($sentData[$level])) {
+								echo "Already sent {$level} notification.\n";
+								return;
+							}
 						}
 					}
 				}
@@ -102,14 +113,13 @@
 			$cmd .= 'mutt -s "Grey Pantera" ' . join(',', $contacts);
 
 			// try creating map attachment
-			$fileName = 'current-location.png';
 			$map = $this->getMap();
 			
 			if ($map !== false) {
-				$file = file_put_contents($fileName, $map);
+				$file = file_put_contents($this->_files['png'], $map);
 
-				if ($file !== false && file_exists($fileName)) {
-					$cmd .= ' -a ' . $fileName;
+				if ($file !== false && file_exists($this->_files['png'])) {
+					$cmd .= ' -a ' . $this->_files['png'];
 				}
 			}
 
@@ -118,7 +128,9 @@
 
 			// save send time
 			$sentData[$level] = time();
-			file_put_contents($sentDataFile, json_encode($sentData));
+			$sentData['latlong'] = $currentLocation;
+
+			file_put_contents($this->_files['data'], json_encode($sentData));
 		}
 
 		public function getData ($url) {
