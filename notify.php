@@ -23,13 +23,11 @@
 			$this->_loc = $this->getData($url);
 			if (isset($this->_loc->error)) return;
 
-			// quit if parked less than three hours
-			/*
+			// quit if parked less than two hours
 			$diff = $this->getSecondsFrom($this->_loc->timestamp);
 			
 			if ($diff === false) return;
-			if ($diff < 3 * 60 * 60) return;
-			*/
+			if (abs($diff) < 2 * 60 * 60) return;
 
 			// street sweeping
 			$this->getStreetSweeping();
@@ -52,8 +50,11 @@
 
 			$untilSweep = $this->getSecondsFrom($row->properties->cleaning_time_start);
 			if (!is_numeric($untilSweep)) return;
+
+			// already past
+			if ($untilSweep <= 0) return;
 			
-			$hours = ($untilSweep / 3600) * -1;
+			$hours = ($untilSweep / 3600);
 
 			if ($hours < 12) {
 				if ($hours < 1.1) {
@@ -145,13 +146,14 @@
 
 		public function getSecondsFrom ($val) {
 			if (is_numeric($val)) {
+				if ($val === 0) return false;
 				$time = $val;
 			} else {
 				$time = strtotime($val);
 				if (!$time) return false;
 			}
 
-			return (time() - $time);
+			return ($time - time());
 		}
 	}
 
