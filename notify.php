@@ -49,7 +49,7 @@
 			if (!isset($row->properties->cleaning_time_start)) return;
 
 			$untilSweep = $this->getSecondsFrom($row->properties->cleaning_time_start);
-			if (!is_numeric($untilSweep)) return;
+			if ($untilSweep === false) return;
 
 			// already past
 			if ($untilSweep <= 0) return;
@@ -108,7 +108,7 @@
 			}
 
 			$date = gmdate('g:ia \o\n l, F jS', $sweepTime);
-			$cmd = 'echo "I might be parked in a street sweeping zone. Street sweeping starts at ' . $date . '." | ';
+			$cmd = 'echo "I might be parked in a street sweeping zone. It looks like street sweeping starts at ' . $date . '." | ';
 			
 			require_once('contacts.php');
 			$cmd .= 'mutt -s "Grey Pantera" ' . join(',', $contacts);
