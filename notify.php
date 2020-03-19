@@ -1,6 +1,7 @@
 <?php
 
 	class Notify {
+		protected $_debug = false;
 		protected $_credentials = false;
 		protected $_loc = false;
 		protected $_files = array();
@@ -8,6 +9,12 @@
 		public function __construct () {
 			if (php_sapi_name() != 'cli') die('not allowed');
 			
+			global $argv;
+
+			if (isset($argv[1])) {
+				$this->_debug = ($argv[1] == 'debug');
+			}
+
 			require_once('credentials.php');
 			$this->_credentials = $credentials;
 
@@ -21,11 +28,21 @@
 			$url .= '?' . http_build_query($this->_credentials);
 
 			$this->_loc = $this->getData($url);
-			if (isset($this->_loc->error)) return;
+			
+			if (isset($this->_loc->error)) {
+				if ($this->_debug) print_r($this->_loc);
+				return;
+			}
 
 			// quit if parked less than two hours
 			$diff = $this->getSecondsFrom($this->_loc->timestamp);
 			
+			if ($this->_debug) {
+				echo "Parked hours…\n";
+				echo (abs($diff) / (60 * 60));
+				echo "\n";
+			}
+
 			if ($diff === false) return;
 			if (abs($diff) < 2 * 60 * 60) return;
 
@@ -55,6 +72,12 @@
 			if ($untilSweep <= 0) return;
 			
 			$hours = ($untilSweep / 3600);
+
+			if ($this->_debug) {
+				echo "Hours until sweep…\n";
+				echo $hours;
+				echo "\n";
+			}
 
 			if ($hours < 12) {
 				if ($hours < 1.1) {
@@ -95,6 +118,8 @@
 					// decode failed, reset to empty array
 					$sentData = array();
 				} else {
+					// pulse coordinates not always consistent
+					/*
 					if (is_string($sentData['latlong'])) {
 						// only check if same location
 						if ($sentData['latlong'] == $currentLocation) {
@@ -104,6 +129,7 @@
 							}
 						}
 					}
+					*/
 				}
 			}
 
