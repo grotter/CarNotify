@@ -39,13 +39,21 @@
 			// quit if parked less than two hours
 			$diff = $this->getSecondsFrom($this->_loc->timestamp);
 
+			if ($diff === false) {
+				if ($this->_debug) {
+					echo "Invalid location data.\n";
+					print_r($this->_loc);
+				}
+
+				return;
+			}
+
 			if ($this->_debug) {
 				echo "Parked hours…\n";
 				echo (abs($diff) / (60 * 60));
 				echo "\n";
 			}
 
-			if ($diff === false) return;
 			if (abs($diff) < 2 * 60 * 60) return;
 
 			// street sweeping
@@ -76,7 +84,7 @@
 			$hours = ($untilSweep / 3600);
 
 			if ($this->_debug) {
-				echo "Hours until sweep (". gmdate('g:ia \o\n l, F jS', $row->properties->cleaning_time_start) .")…\n";
+				echo "Hours until sweep on ". gmdate('g:ia \o\n l, F jS', $row->properties->cleaning_time_start) ."…\n";
 				echo $hours;
 				echo "\n";
 			}
