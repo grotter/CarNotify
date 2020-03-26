@@ -1,4 +1,6 @@
 <?php
+	
+	date_default_timezone_set('America/Los_Angeles');
 
 	class Notify {
 		protected $_debug = false;
@@ -8,7 +10,7 @@
 
 		public function __construct () {
 			if (php_sapi_name() != 'cli') die('not allowed');
-			
+
 			global $argv;
 
 			if (isset($argv[1])) {
@@ -36,7 +38,7 @@
 
 			// quit if parked less than two hours
 			$diff = $this->getSecondsFrom($this->_loc->timestamp);
-			
+
 			if ($this->_debug) {
 				echo "Parked hours…\n";
 				echo (abs($diff) / (60 * 60));
@@ -65,7 +67,7 @@
 			if (!isset($row->properties)) return;
 			if (!isset($row->properties->cleaning_time_start)) return;
 
-			$untilSweep = $this->getSecondsFrom($row->properties->cleaning_time_start);
+			$untilSweep = $this->getSecondsFrom($row->properties->cleaning_time_start, true);
 			if ($untilSweep === false) return;
 
 			// already past
@@ -74,7 +76,7 @@
 			$hours = ($untilSweep / 3600);
 
 			if ($this->_debug) {
-				echo "Hours until sweep…\n";
+				echo "Hours until sweep (". gmdate('g:ia \o\n l, F jS', $row->properties->cleaning_time_start) .")…\n";
 				echo $hours;
 				echo "\n";
 			}
@@ -118,18 +120,24 @@
 					// decode failed, reset to empty array
 					$sentData = array();
 				} else {
-					// pulse coordinates not always consistent
-					/*
-					if (is_string($sentData['latlong'])) {
-						// only check if same location
-						if ($sentData['latlong'] == $currentLocation) {
-							if (is_numeric($sentData[$level])) {
-								echo "Already sent {$level} notification.\n";
-								return;
+					// only send first notification once every 12 hours
+					$first = $sentData['first'];
+
+					if ($level == 'first' && is_numeric($first)) {
+						$lastSent = $this->getSecondsFrom($first);
+
+						if ($lastSent !== false) {
+							$hoursDiff = abs($lastSent) / 3600;
+
+							if ($hoursDiff < 12) {
+								if ($this->_debug) {
+									echo "Already sent first notification {$hoursDiff} hours ago.\n";
+								}
+
+								return;	
 							}
 						}
 					}
-					*/
 				}
 			}
 
@@ -170,16 +178,23 @@
 			return $decoded;
 		}
 
-		public function getSecondsFrom ($val) {
-			if (is_numeric($val)) {
-				if ($val === 0) return false;
-				$time = $val;
-			} else {
-				$time = strtotime($val);
-				if (!$time) return false;
+		public function getSecondsFrom ($val, $offset = false) {
+			if (is_string($val)) {
+				$val = strtotime($val);
+				if ($val === false) return false;
 			}
 
-			return ($time - time());
+			$val = intval($val);
+			if ($val === 0) return false;
+
+			$now = new DateTime();
+			$diff = $val - $now->getTimestamp();
+
+			if ($offset) {
+				$diff -= $now->getOffset();
+			}
+
+			return $diff;
 		}
 	}
 
