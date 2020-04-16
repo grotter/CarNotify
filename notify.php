@@ -6,6 +6,7 @@
 		protected $_debug = false;
 		protected $_credentials = false;
 		protected $_loc = false;
+		protected $_isSanCarlos = false;
 		protected $_files = array();
 
 		public function __construct () {
@@ -56,7 +57,36 @@
 
 			if (abs($diff) < 2 * 60 * 60) return;
 
-			// street sweeping
+			// first query
+			$this->getAddress();
+		}
+
+		public function getAddress () {
+			$url = 'https://api.mapbox.com/geocoding/v5/mapbox.places/';
+			$url .= $this->_loc->longitude . ',' . $this->_loc->latitude;
+			$url .= '.json';
+
+			$url .= '?' . http_build_query(array(
+				'access_token' => $this->_credentials['mapbox_token']
+			));
+
+			$data = $this->getData($url);
+
+			if (is_array($data->features)) {
+				foreach ($data->features as $feature) {
+					if ($feature->place_type[0] == 'address') {
+						if (isset($feature->text)) {
+							if (strpos($feature->text, 'San Carlos') === 0) {
+								$this->_isSanCarlos = true;
+							}
+						}
+
+						break;
+					}
+				}
+			}
+
+			// next query
 			$this->getStreetSweeping();
 		}
 
@@ -72,6 +102,21 @@
 			if (!is_array($data->rows)) return;
 			
 			$row = $data->rows[0];
+
+			// make sure we have accurate data for San Carlos
+			if ($this->_isSanCarlos) {
+				foreach ($data->rows as $obj) {
+					if (!isset($obj->properties)) continue;
+					if (!isset($obj->properties->cleaning_time_start)) continue;
+
+					// Thursday
+					if (gmdate('l', $obj->properties->cleaning_time_start) == 'Thursday') {
+						$row = $obj;
+						break;
+					}
+				}
+			}
+
 			if (!isset($row->properties)) return;
 			if (!isset($row->properties->cleaning_time_start)) return;
 
