@@ -6,7 +6,7 @@
 		protected $_debug = false;
 		protected $_credentials = false;
 		protected $_loc = false;
-		protected $_isSanCarlos = false;
+		protected $_dayOfWeek = false;
 		protected $_files = array();
 
 		public function __construct () {
@@ -77,7 +77,10 @@
 					if ($feature->place_type[0] == 'address') {
 						if (isset($feature->text)) {
 							if (strpos($feature->text, 'San Carlos') === 0) {
-								$this->_isSanCarlos = true;
+								$this->_dayOfWeek = 'Thursday';
+							}
+							if (strpos($feature->text, 'Lexington') === 0) {
+								$this->_dayOfWeek = 'Tuesday';
 							}
 						}
 
@@ -104,13 +107,13 @@
 			$row = $data->rows[0];
 
 			// make sure we have accurate data for San Carlos
-			if ($this->_isSanCarlos) {
+			if ($this->_dayOfWeek) {
 				foreach ($data->rows as $obj) {
 					if (!isset($obj->properties)) continue;
 					if (!isset($obj->properties->cleaning_time_start)) continue;
 
-					// Thursday
-					if (gmdate('l', $obj->properties->cleaning_time_start) == 'Thursday') {
+					// a known cleaning day of the week
+					if (gmdate('l', $obj->properties->cleaning_time_start) == $this->_dayOfWeek) {
 						$row = $obj;
 						break;
 					}
