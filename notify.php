@@ -31,7 +31,8 @@
 			$url .= '?' . http_build_query($this->_credentials);
 
 			$this->_loc = $this->getData($url);
-			
+			if (!$this->_loc) return false;
+
 			if (isset($this->_loc->error)) {
 				if ($this->_debug) print_r($this->_loc);
 				return;
@@ -159,7 +160,7 @@
 				'logo' => 'false'
 			));
 
-			return file_get_contents($url);
+			return $this->getData($url, true);
 		}
 
 		public function sendNotification ($sweepTime, $level) {
@@ -224,11 +225,21 @@
 			file_put_contents($this->_files['data'], json_encode($sentData));
 		}
 
-		public function getData ($url) {
-			$json = file_get_contents($url);
-			if ($json === false) return false;
+		public function getData ($url, $raw = false) {
+			$ch = curl_init();
 			
-			$decoded = json_decode($json);
+			curl_setopt($ch, CURLOPT_HEADER, false);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_URL, $url);
+			// curl_setopt($ch, CURLOPT_SSLVERSION, 3); 
+			
+			$result = curl_exec($ch);
+			curl_close($ch);
+
+			if ($result === false) return false;
+			if ($raw) return $result;
+
+			$decoded = json_decode($result);
 			if (is_null($decoded)) return false;
 
 			return $decoded;
