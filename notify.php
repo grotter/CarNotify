@@ -128,7 +128,10 @@
 			if ($untilSweep === false) return;
 
 			// already past
-			if ($untilSweep <= 0) return;
+			if ($untilSweep <= 0) {
+				echo "Already past. Quitting…\n";
+				return;
+			}
 			
 			$hours = ($untilSweep / 3600);
 
@@ -231,9 +234,20 @@
 			curl_setopt($ch, CURLOPT_HEADER, false);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($ch, CURLOPT_URL, $url);
-			// curl_setopt($ch, CURLOPT_SSLVERSION, 3); 
+			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 			
 			$result = curl_exec($ch);
+
+			if ($this->_debug) {
+				echo $url . "\n";
+				echo $result . "\n";
+
+				if ($result === false) {
+					echo curl_error($ch) . "\n";
+				}
+			}
+
 			curl_close($ch);
 
 			if ($result === false) return false;
