@@ -8,6 +8,7 @@
 		protected $_loc = false;
 		protected $_dayOfWeek = false;
 		protected $_files = array();
+		protected $_urlPrefix = 'https://www.ocf.berkeley.edu/~grotter/prius/json/';
 
 		public function __construct () {
 			if (php_sapi_name() != 'cli') die('not allowed');
@@ -27,7 +28,7 @@
 			);
 
 			// get location
-			$url = 'https://www.ocf.berkeley.edu/~grotter/prius/json/';
+			$url = $this->_urlPrefix;
 			$url .= '?' . http_build_query($this->_credentials);
 
 			$this->_loc = $this->getData($url);
@@ -94,6 +95,22 @@
 			$this->getStreetSweeping();
 		}
 
+		protected function _getOverride () {
+			$data = $this->getData($this->_urlPrefix . 'override.json');
+
+			// not found
+			if (!$data) return false;
+
+			// check location match
+			if ($data->longitude != $this->_loc->longitude) return false;
+			if ($data->latitude != $this->_loc->latitude) return false;
+
+			// check if expired
+			if (time() > $data->override->cleaning_time_start) return false;
+
+			return $data->override->cleaning_time_start;
+		}
+
 		public function getStreetSweeping () {
 			$url = 'https://api.xtreet.com/roads2/getnearesttolatlng/';
 			$url .= '?' . http_build_query(array(
@@ -107,7 +124,7 @@
 			
 			$row = $data->rows[0];
 
-			// make sure we have accurate data for San Carlos
+			// make sure we have accurate data for exceptions
 			if ($this->_dayOfWeek) {
 				foreach ($data->rows as $obj) {
 					if (!isset($obj->properties)) continue;
@@ -115,6 +132,22 @@
 
 					// a known cleaning day of the week
 					if (gmdate('l', $obj->properties->cleaning_time_start) == $this->_dayOfWeek) {
+						$row = $obj;
+						break;
+					}
+				}
+			}
+
+			// override
+			$override = $this->_getOverride();
+
+			if (is_numeric($override)) {
+				// reset if time matches override
+				foreach ($data->rows as $obj) {
+					if (!isset($obj->properties)) continue;
+					if (!isset($obj->properties->cleaning_time_start)) continue;
+
+					if ($obj->properties->cleaning_time_start == $override) {
 						$row = $obj;
 						break;
 					}
