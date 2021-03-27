@@ -7,6 +7,7 @@
 		protected $_credentials = false;
 		protected $_loc = false;
 		protected $_dayOfWeek = false;
+		protected $_streets = false;
 		protected $_files = array();
 		protected $_urlPrefix = 'https://www.ocf.berkeley.edu/~grotter/prius/json/';
 
@@ -26,6 +27,9 @@
 				'png' => dirname(__FILE__) . '/current-location.png',
 				'data' => dirname(__FILE__) . '/sent-notifications.js'
 			);
+
+			// street override config
+			$this->_streets = $this->getData($this->_urlPrefix . 'streets.json');
 
 			// get location
 			$url = $this->_urlPrefix;
@@ -77,13 +81,15 @@
 			if (is_array($data->features)) {
 				foreach ($data->features as $feature) {
 					if ($feature->place_type[0] == 'address') {
-						if (isset($feature->text)) {
-							if (strpos($feature->text, 'San Carlos') === 0) {
-								$this->_dayOfWeek = 4;
+						if (isset($feature->text) && is_array($this->_streets)) {
+							
+							// override with customization
+							foreach ($this->_streets as $street) {
+								if (strpos($feature->text, $street->needle) === 0) {
+									$this->_dayOfWeek = $street->sweepDay;
+								}	
 							}
-							if (strpos($feature->text, 'Lexington') === 0) {
-								$this->_dayOfWeek = 2;
-							}
+
 						}
 
 						break;
