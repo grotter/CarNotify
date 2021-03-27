@@ -79,10 +79,10 @@
 					if ($feature->place_type[0] == 'address') {
 						if (isset($feature->text)) {
 							if (strpos($feature->text, 'San Carlos') === 0) {
-								$this->_dayOfWeek = 'Thursday';
+								$this->_dayOfWeek = 4;
 							}
 							if (strpos($feature->text, 'Lexington') === 0) {
-								$this->_dayOfWeek = 'Tuesday';
+								$this->_dayOfWeek = 2;
 							}
 						}
 
@@ -131,7 +131,7 @@
 					if (!isset($obj->properties->cleaning_time_start)) continue;
 
 					// a known cleaning day of the week
-					if (gmdate('l', $obj->properties->cleaning_time_start) == $this->_dayOfWeek) {
+					if (gmdate('N', $obj->properties->cleaning_time_start) == $this->_dayOfWeek) {
 						$row = $obj;
 						break;
 					}
