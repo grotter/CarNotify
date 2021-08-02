@@ -11,21 +11,22 @@
 		protected $_files = array();
 		protected $_urlPrefix = 'https://www.ocf.berkeley.edu/~grotter/prius/json/';
 
-		public function __construct () {
+		public function __construct ($car) {
 			if (php_sapi_name() != 'cli') die('not allowed');
 
 			global $argv;
 
-			if (isset($argv[1])) {
-				$this->_debug = ($argv[1] == 'debug');
+			if (isset($argv[2])) {
+				$this->_debug = ($argv[2] == 'debug');
 			}
 
 			require_once('credentials.php');
-			$this->_credentials = $credentials;
+			if (!isset($credentials[$car])) die;
+			$this->_credentials = $credentials[$car];
 
 			$this->_files = array(
-				'png' => dirname(__FILE__) . '/current-location.png',
-				'data' => dirname(__FILE__) . '/sent-notifications.js'
+				'png' => dirname(__FILE__) . '/current-location-' . $this->_credentials['vehicleId'] . '.png',
+				'data' => dirname(__FILE__) . '/sent-notifications-' . $this->_credentials['vehicleId'] . '.js'
 			);
 
 			// street override config
@@ -102,7 +103,7 @@
 		}
 
 		protected function _getOverride () {
-			$data = $this->getData($this->_urlPrefix . 'override.json');
+			$data = $this->getData($this->_urlPrefix . 'override-' . $this->_credentials['vehicleId'] . '.json');
 
 			// not found
 			if (!$data) return false;
@@ -244,7 +245,7 @@
 			$cmd = 'echo "I might be parked in a street sweeping zone. It looks like street sweeping starts at ' . $date . '." | ';
 			
 			require_once('contacts.php');
-			$cmd .= 'mutt -s "Grey Pantera" ' . join(',', $contacts);
+			$cmd .= 'mutt -s "' . $this->_credentials['name'] . '" ' . join(',', $contacts);
 
 			// try creating map attachment
 			$map = $this->getMap();
@@ -319,7 +320,7 @@
 	}
 
 	if (php_sapi_name() == 'cli') {
-		$foo = new Notify();	
+		$foo = new Notify($argv[1]);	
 	}
 	
 ?>
