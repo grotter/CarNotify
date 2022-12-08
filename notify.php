@@ -9,7 +9,9 @@
 		protected $_dayOfWeek = false;
 		protected $_streets = false;
 		protected $_files = array();
-		protected $_urlPrefix = 'https://www.ocf.berkeley.edu/~grotter/prius/json/';
+		
+		protected $_urlPrefix = 'https://utility.calacademy.org/grotter/carloc/';
+		protected $_streetsUrl = 'https://www.ocf.berkeley.edu/~grotter/prius/json/streets.json';
 
 		public function __construct ($car) {
 			if (php_sapi_name() != 'cli') die('not allowed');
@@ -30,11 +32,14 @@
 			);
 
 			// street override config
-			$this->_streets = $this->getData($this->_urlPrefix . 'streets.json');
+			$this->_streets = $this->getData($this->_streetsUrl);
 
 			// get location
 			$url = $this->_urlPrefix;
-			$url .= '?' . http_build_query($this->_credentials);
+			$url .= '?' . http_build_query(array(
+				'vehicleId' => $this->_credentials['vehicleId'],
+				'token' => $this->_credentials['token']
+			));
 
 			$this->_loc = $this->getData($url);
 			if (!$this->_loc) return false;
@@ -103,7 +108,7 @@
 		}
 
 		protected function _getOverride () {
-			$data = $this->getData($this->_urlPrefix . 'override-' . $this->_credentials['vehicleId'] . '.json');
+			$data = $this->getData($this->_urlPrefix . 'override/' . $this->_credentials['vehicleId'] . '.json');
 
 			// not found
 			if (!$data) return false;
